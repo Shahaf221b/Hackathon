@@ -1,5 +1,6 @@
 import socket
 import select
+import struct
 import threading
 import time
 from random import randrange
@@ -7,7 +8,7 @@ from pynput.keyboard import Key, Listener  #TODO: check if ok to use this packag
 
 
 IP = socket.gethostbyname(socket.gethostname())
-portTCP = 10010
+#portTCP = 10010
 FORMAT = "utf-8"
 
 team_number = randrange(50)
@@ -61,11 +62,11 @@ def main():
     print(f"client name: {team_name}")  # TODO: remove
     data, addr = udp_socket.recvfrom(2048)
     print(f"Received offer from {addr[0]}, attempting to connect...")
-    print(f"{addr[1]} - port?")
     # connecting to found server
 
     tcp_socket = socket.socket()
-    tcp_socket.connect((addr[0], portTCP))
+    address = struct.unpack('QQQ', data)
+    tcp_socket.connect((addr[0], address[0]))
 
     message = team_name + "\n"
     try:
@@ -89,6 +90,7 @@ def main():
         #tcp_socket.send(msg.encode(FORMAT))
         data = tcp_socket.recv(1024)
         print(data.decode(FORMAT))
+
     # numSent = tcp_socket.send("thank you for connecting me".encode('utf-8'))
 
 

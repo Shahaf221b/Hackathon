@@ -10,7 +10,6 @@ local_ip = socket.gethostbyname(socket.gethostname())
 magic_cookie = 0xabcddcba
 msg_type = 0x2
 FORMAT = 'utf-8'
-
 # thread_lock = threading.Lock()
 connected_clients = []
 answer = None
@@ -34,7 +33,8 @@ def broadcasting():
     message = "Server started, listening on IP address " + local_ip
     print(message)
 
-    message_decode = struct.pack('QQ', magic_cookie, msg_type)
+    # message_decode = struct.pack('QQ', magic_cookie, msg_type)
+    message_decode = struct.pack('QQQ',portTCP, magic_cookie, msg_type)
     while True:
         UDPServerSocket.sendto(message_decode, ("255.255.255.255", 13117))
         time.sleep(1)
@@ -93,12 +93,12 @@ def game_on():
     game_over = "\nGame over!\n" \
                 "The correct answer was 4!\n"
     send_message_to_players(client_1, client_2, game_over)
-    print("message was sent")  # TODO: remove
     if winner is not None:
         winner_msg = f"Congratulations to the winner: {winner}"
     else:
         winner_msg = f"There was a tie"  # TODO: format
     send_message_to_players(client_1, client_2, winner_msg)
+
 
 
 def send_message_to_players(client_1, client_2, message):
