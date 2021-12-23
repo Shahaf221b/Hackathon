@@ -1,146 +1,117 @@
 import socket
 import struct
-import sys
 import time
 import threading
+from _thread import *
 
-hostname = socket.gethostname()
-local_ip = socket.gethostbyname(hostname)
+portUDP = 20022
+portTCP = 10010
+local_ip = socket.gethostbyname(socket.gethostname())
 magic_cookie = 0xabcddcba
 msg_type = 0x2
-all_clients = {}
+FORMAT = 'utf-8'
 
-def broadcasting():
-
-    try:
-        UDPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        UDPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        portUDP = 20000  # TODO: change
-        UDPServerSocket.bind((local_ip, portUDP))
-        message = "Server started, listening on IP address " + local_ip
-        print(message)
-        UDPServerSocket.settimeout(0.5) #TODO:check if ok
-
-        message = struct.pack('QQ', magic_cookie, msg_type) #TODO: check if correct with 'QQ'
-        time_to_wait = time.time() + 10  # TODO: change
-        while time_to_wait > time.time():
-            UDPServerSocket.sendto(message, ("255.255.255.255", 13117))
-            time.sleep(1)
-    except Exception as e:
-        UDPServerSocket.close()
-        print(f"in broadcast: {e}")
-
-
-def connecting_to_clients(tcp_connect):
-
-    new_player = False
-    try:
-        time_to_wait = time.time() + 10
-        #tcp_connect.settimeout(time_to_wait - time.time())
-        tcp_connect.settimeout(10)
-        while True:
-            conn, client_address = tcp_connect.accept()
-            data = conn.recv(1024)  # TODO: check if 1024 enough
-            team_name = data.decode('utf-8')
-            # threading.lock.acquire()
-            all_clients[team_name] = conn, client_address
-            print(f"team {team_name} connected")  # TODO: remove
-            new_player = True
-            threading.lock.release()
-    except Exception as e:
-        if new_player:
-            # need to start game ?
-            print("")  # TODO: remove?
-        else:
-            # no player connected, close tcp connection
-            tcp_connect.close()
-
-
-def welcome_message(c1,c2):
-    message = "Welcome to Quick Maths.\n"
-    message += f"Player 1: {c1}\n"
-    message += f"Player 2: {c2}\n"
-    message += "==\n"
-    message += "Please answer the following question as fast as you can:\n"
-    message += "How much is 2+2?\n"
-    return message
-
-
-def game_over_message():
-    message = "Game over!\n"
-    message += "The correct answer was 4!\n"
-    # TODO: add the name of the winner team
-    return message
-
-
-def gameOn():
-
-    try:
-        all_clients_items = [x for x in all_clients.items()]
-        client1 = all_clients_items[0]
-        #client2 = all_clients_items[1]  #TODO:
-        #welcome_msg = welcome_message(client1[0], client2[0])  #TODO:
-        welcome_msg = welcome_message(client1[0], "no c2")
-        welcome_msg = welcome_msg.encode()
-        gameOver_message = game_over_message()
-        gameOver_message = gameOver_message.encode()
-        client1[1][0].send(welcome_msg)
-        #client2[1][0].send(welcome_msg)  #TODO:
-        # TODO: receive client answer
-        time_plus_10 = time.time() + 10
-        while time.time() < time_plus_10:
-            time.sleep(1)
-            pass
-        client1[1][0].send(gameOver_message)
-        #client2[1][0].send(gameOver_message)  #TODO:
-    except Exception as e:
-        print(f"in game on: {e}")
-
-
+# thread_lock = threading.Lock()
+connected_clients = []
+answer = None
 
 
 def main():
-    # interfaces = socket.getaddrinfo(host=socket.gethostname(), port=None, family=socket.AF_INET)
-    # allips = [ip[-1][0] for ip in interfaces]
-    #
-    # msg_string = f"Server started, listening on IP address {socket.gethostbyname(socket.gethostname())}"
-    # print(msg_string)
-    # msg = str.encode(msg_string)
+    thread_udp = threading.Thread(target=broadcasting, args=())
+    thread_tcp = threading.Thread(target=connecting_to_clients, args=())
+
+    thread_udp.start()
+    thread_tcp.start()
+    thread_udp.join()
+    thread_tcp.join()
 
 
-    # while True:
-    #
-    #     for ip in allips:
-    #         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)  # UDP
-    #         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    #         sock.bind((ip, 0))
-    #         sock.sendto(msg, ("255.255.255.255", 13117))
-    #         sock.close()
-    #     sleep(1)
+# start broadcasting the entire network
+def broadcasting():
+    UDPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    UDPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    UDPServerSocket.bind((local_ip, portUDP))
+    message = "Server started, listening on IP address " + local_ip
+    print(message)
 
-    try:
-        try:
-            TCPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            portTCP = 10000 #TODO: change
-            TCPServerSocket.bind((local_ip, portTCP))
-            TCPServerSocket.listen(10)
-        except :
-            print("no answer from client")
-
-        all_clients = {}
-        thread_udp = threading.Thread(target = broadcasting, args = ())
-        thread_tcp = threading.Thread(target = connecting_to_clients, args=(TCPServerSocket,))
-
-        thread_udp.start()
+    message_decode = struct.pack('QQ', magic_cookie, msg_type)
+    while True:
+        UDPServerSocket.sendto(message_decode, ("255.255.255.255", 13117))
         time.sleep(1)
-        thread_tcp.start()
-        thread_udp.join()
-        thread_tcp.join()
-        #threading.Thread.sleep(10)
-        gameOn()
-        TCPServerSocket.close()
-    except :
-        print("client connection lost")
+
+
+def connecting_to_clients():
+    # setting the TCP socket
+    TCPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    TCPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    TCPServerSocket.bind(('', portTCP))
+    TCPServerSocket.listen(5)
+
+    # waiting until we have 2 clients
+    while len(connected_clients) < 2:
+        conn, addr = TCPServerSocket.accept()
+        name = conn.recv(2048).decode(FORMAT)  # TODO- is 2048 enough?
+        name_with_index = name, str(len(connected_clients))  # TODO- remove before submitting
+        connected_clients.append((name_with_index, conn, addr))
+        start_new_thread(get_messages, (conn, name,))
+
+    # two clients are connected
+    time.sleep(10)  # TODO: change
+    game_on()
+
+
+# TODO- more questions?
+
+def game_on():
+    client_1 = connected_clients[0]
+    client_2 = connected_clients[1]
+    welcome_message = f"Welcome to Quick Maths.\n" \
+                      f"Player 1: {client_1[0][0]}" \
+                      f"\nPlayer 2: {client_2[0][0]}" \
+                      "==\n" \
+                      "Please answer the following question as fast as you can:\n" \
+                      "How much is 2+2?"
+
+    send_message_to_players(client_1, client_2, welcome_message)
+
+    winner = None
+
+    starting_time = time.time()
+    while time.time() < starting_time + 10:
+        if answer is not None:
+            name = answer[1]
+            if answer[0] == '4':  # the answer is right
+                winner = name
+            else:  # the answer is wrong
+                if name == client_1[0][0]:
+                    winner = client_2[0][0]
+                else:
+                    winner = client_1[0][0]
+            break
+
+
+    game_over = "\nGame over!\n" \
+                "The correct answer was 4!\n"
+    send_message_to_players(client_1, client_2, game_over)
+    print("message was sent")  # TODO: remove
+    if winner is not None:
+        winner_msg = f"Congratulations to the winner: {winner}"
+    else:
+        winner_msg = f"There was a tie"  # TODO: format
+    send_message_to_players(client_1, client_2, winner_msg)
+
+
+def send_message_to_players(client_1, client_2, message):
+    client_1[1].send(message.encode(FORMAT))
+    client_2[1].send(message.encode(FORMAT))
+
+
+def get_messages(conn, name):
+    while True:
+        msg = conn.recv(2048).decode(FORMAT)
+        global answer
+        answer = (msg, name)
+        #print(answer)  # TODO: remove
 
 
 main()

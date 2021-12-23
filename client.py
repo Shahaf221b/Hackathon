@@ -1,46 +1,96 @@
 import socket
-import struct
+import select
+import threading
 import time
-# sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-# sock.bind(("0.0.0.0", 13117))
-# while True:
-#     data, addr = sock.recvfrom(1024)
-#     print(data)
+from random import randrange
+from pynput.keyboard import Key, Listener  #TODO: check if ok to use this package
 
-team_name = "Shnatz"
+
+IP = socket.gethostbyname(socket.gethostname())
+portTCP = 10010
+FORMAT = "utf-8"
+
+team_number = randrange(50)
+team_name = f"Team {team_number}"
+key_ = None
+
+
+def setKey(key):
+    global key_
+    key_ = key
+
+def on_press(key):
+    # print('{0} pressed'.format(
+    #     key))
+    # time_to_wait = time.time() + 10
+    # while time.time() < time_to_wait:  # TODO: check
+    #     setKey(key)
+    #     return False
+    setKey(key)
+    return False
+
+def on_release(key):
+    # print('{0} release'.format(
+    #     key))
+    # time_to_wait = time.time() +10
+    # while time.time() < time_to_wait:  # TODO: check
+    #     # Stop listener
+    #     pass
+    if key_:
+        return False
+
+def keyboard_input(tcp_socket):
+    with Listener(
+            on_press=on_press,
+            on_release=on_release) as listener:
+        listener.join()
+    #print(f"final key: {key_}")
+    if key_:
+        key_tosend = f"{key_}"
+        tcp_socket.send(key_tosend.encode(FORMAT))
+
+
 def main():
-    #portTCP = 0
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
-        print("Client started, listening for offer requests...")
-        #sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # TODO: check
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        #sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.bind(("0.0.0.0", 13117))
-        data, addr = sock.recvfrom(2048)  # TODO: check buffer size
-        print(f"Received offer from {addr[0]}, attempting to connect...")
-        #portTCP = struct.unpack('QQ', data)
-    except Exception as e:
-        print(f"at main() in client: {e}")
 
-    tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    portTCP = 10000  # TODO: change
+    # finding a server to connect to
+    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # listening to the general port and connection to the first message
+    udp_socket.bind(("0.0.0.0", 13117))
+    print("Client started, listening for offer requests...")
+    print(f"client name: {team_name}")  # TODO: remove
+    data, addr = udp_socket.recvfrom(2048)
+    print(f"Received offer from {addr[0]}, attempting to connect...")
+    print(f"{addr[1]} - port?")
+    # connecting to found server
+
+    tcp_socket = socket.socket()
     tcp_socket.connect((addr[0], portTCP))
-    print("client connected")  # TODO: remove
-    tcp_socket.send(team_name.encode('utf-8'))
 
-    server_answer1 = tcp_socket.recv(2048)  # TODO: check buffer size
-    server_answer2 = tcp_socket.recv(2048)
-    server_answer3 = tcp_socket.recv(2048)
+    message = team_name + "\n"
+    try:
+        tcp_socket.send(message.encode(FORMAT))
+    except:
+        print("connection failed")  # TODO- if the server has no more room- do we continue listening with while loop?
 
-    time_to_wait = time.time() + 10
-    while time.time() < time_to_wait:  # wait for input
-        time.sleep(1)
-        pass
-    print(server_answer1.decode('utf-8'))
-    print(server_answer2.decode('utf-8'))
-    print(server_answer3.decode('utf-8'))
+    while True:
+        # getting the question
+        data, addr = tcp_socket.recvfrom(2048)
+        print(data.decode(FORMAT))
+        game_on = True
+        # while game_on:
+        #     keyboard_input(tcp_socket)
+        #     data = tcp_socket.recv(1024)
+        #     if data:
+        #         game_on = False
+        keyboard_input(tcp_socket)
+
+        #msg = input("") # TODO- change to dynamic input
+        #tcp_socket.send(msg.encode(FORMAT))
+        data = tcp_socket.recv(1024)
+        print(data.decode(FORMAT))
+    # numSent = tcp_socket.send("thank you for connecting me".encode('utf-8'))
+
 
 
 main()
