@@ -4,11 +4,10 @@ import struct
 import threading
 import time
 from random import randrange
-from pynput.keyboard import Key, Listener  #TODO: check if ok to use this package
-
+from pynput.keyboard import Key, Listener  # TODO: check if ok to use this package
 
 IP = socket.gethostbyname(socket.gethostname())
-#portTCP = 10010
+# portTCP = 10010
 FORMAT = "utf-8"
 
 team_number = randrange(50)
@@ -20,6 +19,7 @@ def setKey(key):
     global key_
     key_ = key
 
+
 def on_press(key):
     # print('{0} pressed'.format(
     #     key))
@@ -29,6 +29,7 @@ def on_press(key):
     #     return False
     setKey(key)
     return False
+
 
 def on_release(key):
     # print('{0} release'.format(
@@ -40,12 +41,13 @@ def on_release(key):
     if key_:
         return False
 
+
 def keyboard_input(tcp_socket):
     with Listener(
             on_press=on_press,
             on_release=on_release) as listener:
         listener.join()
-    #print(f"final key: {key_}")
+    # print(f"final key: {key_}")
     if key_:
         key_tosend = f"{key_}"
         tcp_socket.send(key_tosend.encode(FORMAT))
@@ -53,46 +55,60 @@ def keyboard_input(tcp_socket):
 
 def main():
 
-    # finding a server to connect to
-    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    # listening to the general port and connection to the first message
-    udp_socket.bind(("0.0.0.0", 13117))
-    print("Client started, listening for offer requests...")
-    print(f"client name: {team_name}")  # TODO: remove
-    data, addr = udp_socket.recvfrom(2048)
-    print(f"Received offer from {addr[0]}, attempting to connect...")
-    # connecting to found server
-
-    tcp_socket = socket.socket()
-    address = struct.unpack('QQQ', data)
-    tcp_socket.connect((addr[0], address[0]))
-
-    message = team_name + "\n"
-    try:
-        tcp_socket.send(message.encode(FORMAT))
-    except:
-        print("connection failed")  # TODO- if the server has no more room- do we continue listening with while loop?
-
     while True:
-        # getting the question
-        data, addr = tcp_socket.recvfrom(2048)
-        print(data.decode(FORMAT))
-        game_on = True
-        # while game_on:
-        #     keyboard_input(tcp_socket)
-        #     data = tcp_socket.recv(1024)
-        #     if data:
-        #         game_on = False
-        keyboard_input(tcp_socket)
+        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        tcp_socket = socket.socket()
+        try:
+            # finding a server to connect to
+            udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # listening to the general port and connection to the first message
+            udp_socket.bind(("0.0.0.0", 13117))
+            print("Client started, listening for offer requests...")
+            print(f"client name: {team_name}")  # TODO: remove
+            data, addr = udp_socket.recvfrom(2048)
+            print(f"Received offer from {addr[0]}, attempting to connect...")
+            # connecting to found server
 
-        #msg = input("") # TODO- change to dynamic input
-        #tcp_socket.send(msg.encode(FORMAT))
-        data = tcp_socket.recv(1024)
-        print(data.decode(FORMAT))
+            address = struct.unpack('QQQ', data)
+            tcp_socket.connect((addr[0], address[0]))
 
-    # numSent = tcp_socket.send("thank you for connecting me".encode('utf-8'))
+            message = team_name + "\n"
+            tcp_socket.send(message.encode(FORMAT))
 
+            # while True:
+            # getting the question
+            data, addr = tcp_socket.recvfrom(2048)
+            print(data.decode(FORMAT))
+            keyboard_input(tcp_socket)
+            # data, addr = tcp_socket.recvfrom(2048)
+            data = tcp_socket.recv(1024)
+            print(data.decode(FORMAT))
+            data = tcp_socket.recv(1024)
+            print(data.decode(FORMAT))
+            # time.sleep(1)
+            tcp_socket.close()
+        # except ConnectionResetError as connectionE:
+        #     print(connectionE)
+        #     tcp_socket.close()
+        #     break
+        except Exception as e:
+            print(e)
+            tcp_socket.close()
+            continue
+            # # print("connection failed", e)  # TODO- if the server has no more room- do we continue listening with while loop?
+            # print(e)
+            # break
+            # raise e
+        # finally:
+        #     if udp_socket is not None:
+        #         udp_socket.close()
+        #         print("closing UDP socket")
+        #     if tcp_socket is not None:
+        #         tcp_socket.close()
+        #         print("closing TCP socket")
+
+
+# numSent = tcp_socket.send("thank you for connecting me".encode('utf-8'))
 
 
 main()

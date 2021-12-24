@@ -1,11 +1,12 @@
+import random
 import socket
 import struct
 import time
 import threading
 from _thread import *
 
-portUDP = 20022
-portTCP = 10010
+portUDP = random.randint(2000, 30000)
+portTCP = random.randint(2000, 30000)
 local_ip = socket.gethostbyname(socket.gethostname())
 magic_cookie = 0xabcddcba
 msg_type = 0x2
@@ -13,67 +14,107 @@ FORMAT = 'utf-8'
 # thread_lock = threading.Lock()
 connected_clients = []
 answer = None
+UDPServerSocket = None
+# thread_udp = None
+UDP_continue = True
 
 
 def main():
-    thread_udp = threading.Thread(target=broadcasting, args=())
-    thread_tcp = threading.Thread(target=connecting_to_clients, args=())
 
-    thread_udp.start()
-    thread_tcp.start()
-    thread_udp.join()
-    thread_tcp.join()
+    while True:
+        # global thread_udp
+        global portTCP
+        portTCP += 1
+        thread_udp = threading.Thread(target=broadcasting, args=())
+        thread_tcp = threading.Thread(target=connecting_to_clients, args=())
+        # print("hello")
+        thread_udp.start()
+        thread_tcp.start()
+        # print("hello")
+
+        thread_udp.join()
+        thread_tcp.join()
 
 
 # start broadcasting the entire network
 def broadcasting():
+    global UDP_continue
+    UDP_continue = True
+    global UDPServerSocket
     UDPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    UDPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    UDPServerSocket.bind((local_ip, portUDP))
-    message = "Server started, listening on IP address " + local_ip
-    print(message)
+    try:
+        UDPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        UDPServerSocket.bind((local_ip, portUDP))
+        message = "Server started, listening on IP address " + local_ip
+        print(message)
 
-    # message_decode = struct.pack('QQ', magic_cookie, msg_type)
-    message_decode = struct.pack('QQQ',portTCP, magic_cookie, msg_type)
-    while True:
-        UDPServerSocket.sendto(message_decode, ("255.255.255.255", 13117))
-        time.sleep(1)
+        # message_decode = struct.pack('QQ', magic_cookie, msg_type)
+        message_decode = struct.pack('QQQ', portTCP, magic_cookie, msg_type)
+        while UDP_continue:
+            UDPServerSocket.sendto(message_decode, ("255.255.255.255", 13117))
+            time.sleep(1)
+    except Exception as e:
+        print(e)
+        raise e
+    finally:
+        if UDPServerSocket is not None:
+            UDPServerSocket.close()
+            print("closing UDP socket")
 
 
 def connecting_to_clients():
-    # setting the TCP socket
     TCPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    TCPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    TCPServerSocket.bind(('', portTCP))
-    TCPServerSocket.listen(5)
+    try:
+        # setting the TCP socket
+        TCPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        TCPServerSocket.bind(('', portTCP))
+        TCPServerSocket.listen(5)
 
-    # waiting until we have 2 clients
-    while len(connected_clients) < 2:
-        conn, addr = TCPServerSocket.accept()
-        name = conn.recv(2048).decode(FORMAT)  # TODO- is 2048 enough?
-        name_with_index = name, str(len(connected_clients))  # TODO- remove before submitting
-        connected_clients.append((name_with_index, conn, addr))
-        start_new_thread(get_messages, (conn, name,))
+        # adding two clients
+        add_client(TCPServerSocket)
+        add_client(TCPServerSocket)
+        global UDP_continue
+        UDP_continue = False
+        # creating thread for each client
+        global connected_clients
+        start_new_thread(get_messages, (connected_clients[0][1], connected_clients[0][0],))
+        start_new_thread(get_messages, (connected_clients[1][1], connected_clients[1][0],))
 
-    # two clients are connected
-    time.sleep(10)  # TODO: change
-    game_on()
+        # two clients are connected
+        time.sleep(3)  # TODO: change
+        game_on(TCPServerSocket)
+    except Exception as e:
+        print(e)
+        raise e
+    # finally:
+    #     if TCPServerSocket is not None:
+    #         TCPServerSocket.close()
+    #         print("closing TCP socket")
 
 
-# TODO- more questions?
+def add_client(TCPServerSocket):
+    global connected_clients
+    conn, addr = TCPServerSocket.accept()
+    # print(conn, addr)
+    name = conn.recv(2048).decode(FORMAT)  # TODO- is 2048 enough?
+    # print("name", name)
+    connected_clients.append((name, conn, addr))
 
-def game_on():
+
+def game_on(TCPServerSocket):
+    global connected_clients
     client_1 = connected_clients[0]
     client_2 = connected_clients[1]
     welcome_message = f"Welcome to Quick Maths.\n" \
-                      f"Player 1: {client_1[0][0]}" \
-                      f"\nPlayer 2: {client_2[0][0]}" \
+                      f"Player 1: {client_1[0]}" \
+                      f"\nPlayer 2: {client_2[0]}" \
                       "==\n" \
                       "Please answer the following question as fast as you can:\n" \
                       "How much is 2+2?"
 
     send_message_to_players(client_1, client_2, welcome_message)
 
+    global answer
     winner = None
 
     starting_time = time.time()
@@ -83,12 +124,11 @@ def game_on():
             if answer[0] == '4':  # the answer is right
                 winner = name
             else:  # the answer is wrong
-                if name == client_1[0][0]:
-                    winner = client_2[0][0]
+                if name == client_1[0]:
+                    winner = client_2[0]
                 else:
-                    winner = client_1[0][0]
+                    winner = client_1[0]
             break
-
 
     game_over = "\nGame over!\n" \
                 "The correct answer was 4!\n"
@@ -98,7 +138,13 @@ def game_on():
     else:
         winner_msg = f"There was a tie"  # TODO: format
     send_message_to_players(client_1, client_2, winner_msg)
-
+    answer = None
+    TCPServerSocket.close()
+    print("Game over, sending out offer requests...")
+    # global connected_clients
+    connected_clients = []
+    # global thread_udp
+    # thread_udp = threading.Thread(target=broadcasting, args=())
 
 
 def send_message_to_players(client_1, client_2, message):
@@ -107,11 +153,12 @@ def send_message_to_players(client_1, client_2, message):
 
 
 def get_messages(conn, name):
-    while True:
-        msg = conn.recv(2048).decode(FORMAT)
-        global answer
+    # while True:
+    msg = conn.recv(2048).decode(FORMAT)
+    global answer
+    if answer is None:
         answer = (msg, name)
-        #print(answer)  # TODO: remove
+        # print(answer)  # TODO: remove
 
 
 main()
