@@ -7,7 +7,8 @@ from _thread import *
 
 portUDP = random.randint(2000, 30000)
 portTCP = random.randint(2000, 30000)
-local_ip = socket.gethostbyname(socket.gethostname())
+# local_ip = socket.gethostbyname(socket.gethostname())
+local_ip = '172.1.0.27'
 magic_cookie = 0xabcddcba
 msg_type = 0x2
 FORMAT = 'utf-8'
@@ -44,7 +45,8 @@ def broadcasting():
     UDPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     try:
         UDPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        UDPServerSocket.bind((local_ip, portUDP))
+        # UDPServerSocket.bind((local_ip, portUDP))
+        UDPServerSocket.bind(('', portUDP))
         message = "Server started, listening on IP address " + local_ip
         print(message)
 
