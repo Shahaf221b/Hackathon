@@ -98,7 +98,7 @@ def add_client():
         conn, addr = TCPServerSocket.accept()
         name = conn.recv(messageSize).decode(FORMAT)
         connected_clients.append((name, conn, addr))
-        print("hello", name)
+        #print("hello", name)
     except Exception as e:
         close_connection()
 
@@ -144,7 +144,7 @@ def game_on():
     else:
         winner_msg = f"There was a tie"  # TODO: format
     send_message_to_players(client_1, client_2, winner_msg)
-    print("Game over, sending out offer requests...", 'green')
+    print("Game over, sending out offer requests...")
     close_connection()
 
 

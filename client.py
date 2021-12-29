@@ -2,7 +2,7 @@ import socket
 import struct
 import sys
 import threading
-
+from sys import stdin
 from random import randrange
 import getch
 
@@ -38,10 +38,10 @@ def main():
             udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
             # listening to the general port and connection to the first message
-            # udp_socket.bind(("0.0.0.0", 13117))  #TODO: change
+            #udp_socket.bind(("0.0.0.0", 13117))  #TODO: change
             udp_socket.bind(("172.99.255.255", 13117))
             print("Client started, listening for offer requests...")
-            print(f"client name: {team_name}")  # TODO: remove
+            #print(f"client name: {team_name}")  # TODO: remove
             data, addr = udp_socket.recvfrom(messageSize)
             print(f"Received offer from {addr[0]}, attempting to connect...")
 
@@ -64,6 +64,7 @@ def main():
                 #     sock.send(data.encode(FORMAT))
                 data = None
                 for i in range(9):
+                    #data = sys.stdin.readline()
                     data = sys.stdin.readline()
                     sock.send(data.encode(FORMAT))
                     if data is not None:
@@ -73,11 +74,14 @@ def main():
             def recv_msg(sock):
                 data = None
                 for i in range(9):
-                    data, addr = sock.recvfrom(messageSize)
-                    sys.stdout.write(data.decode(FORMAT))
-                    if data is not None:
-                        print(data.decode(FORMAT))
-                        break
+                    try:
+                        data, addr = sock.recvfrom(messageSize)
+                        sys.stdout.write(data.decode(FORMAT))
+                        if data is not None:
+                            print(data.decode(FORMAT))
+                            break
+                    except:
+                        print("")
 
 
             th1 =threading.Thread(target=send_msg, args=(tcp_socket,)).start()
