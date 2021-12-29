@@ -4,13 +4,13 @@ import struct
 import time
 import threading
 from _thread import *
-from termcolor import colored
 
 
 # setting the ports and ip
 portUDP = random.randint(2000, 30000)
 portTCP = random.randint(2000, 30000)
-local_ip = socket.gethostbyname(socket.gethostname())
+# local_ip = socket.gethostbyname(socket.gethostname())
+local_ip = '172.1.0.27'
 globalPort = "255.255.255.255"
 
 # message formatting
@@ -56,9 +56,9 @@ def broadcasting():
         UDPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         UDPServerSocket.bind(('', portUDP))
         message = "Server started, listening on IP address " + local_ip
-        print(colored(message, 'blue'))
+        print(message)
 
-        message_decode = struct.pack('QQQ', portTCP, magic_cookie, msg_type)  # TODO- change
+        message_decode = struct.pack('IBH', magic_cookie, msg_type, portTCP)  # TODO- change
         while UDP_continue:
             UDPServerSocket.sendto(message_decode, (globalPort, 13117))
             time.sleep(1)
@@ -97,6 +97,7 @@ def add_client():
         conn, addr = TCPServerSocket.accept()
         name = conn.recv(messageSize).decode(FORMAT)
         connected_clients.append((name, conn, addr))
+        print("hello", name)
     except Exception as e:
         close_connection()
 
@@ -142,7 +143,7 @@ def game_on():
     else:
         winner_msg = f"There was a tie"  # TODO: format
     send_message_to_players(client_1, client_2, winner_msg)
-    print(colored("Game over, sending out offer requests...", 'green'))
+    print("Game over, sending out offer requests...", 'green')
     close_connection()
 
 

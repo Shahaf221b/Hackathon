@@ -2,7 +2,10 @@ import socket
 import struct
 
 from random import randrange
-from pynput.keyboard import Key, Listener  # TODO: check if ok to use this package
+import getch
+
+
+
 
 FORMAT = "utf-8"
 messageSize = 2048
@@ -10,43 +13,6 @@ messageSize = 2048
 team_number = randrange(50)
 team_name = f"Team {team_number}"
 key_ = None
-
-
-def setKey(key):
-    global key_
-    key_ = key
-
-
-def on_press(key):
-    # print('{0} pressed'.format(
-    #     key))
-    # time_to_wait = time.time() + 10
-    # while time.time() < time_to_wait:  # TODO: check
-    #     setKey(key)
-    #     return False
-    setKey(key)
-    return False
-
-
-def on_release(key):
-    # print('{0} release'.format(
-    #     key))
-    # time_to_wait = time.time() +10
-    # while time.time() < time_to_wait:  # TODO: check
-    #     # Stop listener
-    #     pass
-    if key_:
-        return False
-
-
-def keyboard_input(tcp_socket):
-    with Listener(
-            on_press=on_press,
-            on_release=on_release) as listener:
-        listener.join()
-    if key_:
-        key_toSend = f"{key_}"
-        tcp_socket.send(key_toSend.encode(FORMAT))
 
 
 def main():
@@ -66,7 +32,7 @@ def main():
             print(f"Received offer from {addr[0]}, attempting to connect...")
 
             # connecting to found server
-            address = struct.unpack('QQQ', data) # TODO- change
+            address = struct.unpack('IBH', data)  # TODO- change
             tcp_socket.connect((addr[0], address[0]))
 
             message = team_name + "\n"
@@ -76,7 +42,9 @@ def main():
             data, addr = tcp_socket.recvfrom(messageSize)
             print(data.decode(FORMAT))
             # answering the question
-            keyboard_input(tcp_socket)
+
+            input_char = getch.getch()
+            tcp_socket.send(input_char.encode(FORMAT))
 
             # finish message
             data = tcp_socket.recv(messageSize)
