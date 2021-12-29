@@ -12,7 +12,7 @@ portTCP = random.randint(2000, 30000)
 # local_ip = socket.gethostbyname(socket.gethostname())
 # local_ip = '172.1.0.27'
 local_ip = '172.99.255.255'
-globalPort = "255.255.255.255"
+globalPort = '172.99.255.255'
 
 # message formatting
 magic_cookie = 0xabcddcba
