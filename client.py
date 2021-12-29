@@ -15,6 +15,10 @@ team_name = f"Team {team_number}"
 key_ = None
 
 
+def getInput():
+    pass
+
+
 def main():
     # running the program
     while True:
@@ -33,7 +37,7 @@ def main():
 
             # connecting to found server
             address = struct.unpack('IBH', data)  # TODO- change
-            tcp_socket.connect((addr[0], address[0]))
+            tcp_socket.connect((addr[0], address[2]))
 
             message = team_name + "\n"
             tcp_socket.send(message.encode(FORMAT))
@@ -43,7 +47,7 @@ def main():
             print(data.decode(FORMAT))
             # answering the question
 
-            input_char = getch.getch()
+            input_char = getInput()
             tcp_socket.send(input_char.encode(FORMAT))
 
             # finish message
