@@ -13,7 +13,7 @@ FORMAT = "utf-8"
 messageSize = 2048
 
 team_number = randrange(50)
-team_name = f"Team {team_number}"
+team_name = f"Winx Club"
 key_ = None
 
 
