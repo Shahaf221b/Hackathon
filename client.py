@@ -46,7 +46,7 @@ def main():
             print(f"Received offer from {addr[0]}, attempting to connect...")
 
             # connecting to found server
-            address = struct.unpack('IBH', data)  # TODO- change
+            address = struct.unpack('>IBH', data)  # TODO- change
             tcp_socket.connect((addr[0], address[2]))
 
             message = team_name + "\n"

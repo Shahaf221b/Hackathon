@@ -59,7 +59,7 @@ def broadcasting():
         message = "Server started, listening on IP address " + local_ip
         print(message)
 
-        message_decode = struct.pack('IBH', magic_cookie, msg_type, portTCP)  # TODO- change
+        message_decode = struct.pack('>IBH', magic_cookie, msg_type, portTCP)  # TODO- change
         while UDP_continue:
             UDPServerSocket.sendto(message_decode, (globalPort, 13117))
             time.sleep(1)
