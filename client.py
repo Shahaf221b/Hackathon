@@ -1,5 +1,7 @@
 import socket
 import struct
+import sys
+import threading
 
 from random import randrange
 import getch
@@ -15,8 +17,15 @@ team_name = f"Team {team_number}"
 key_ = None
 
 
-def getInput():
-    pass
+def getInput(tcp_socket):
+    for line in sys.stdin:
+        if 'q' == line.rstrip():
+            key_ = line
+            break
+    tcp_socket.send(line.encode(FORMAT))
+    # if key_:
+    #     key_toSend = f"{key_}"
+    #     tcp_socket.send(key_toSend.encode(FORMAT))
 
 
 def main():
@@ -47,15 +56,43 @@ def main():
             print(data.decode(FORMAT))
             # answering the question
 
-            input_char = getInput()
-            tcp_socket.send(input_char.encode(FORMAT))
+            #########
+            def send_msg(sock):
+                # while True:
+                #     data = sys.stdin.readline()
+                #     sock.send(data.encode(FORMAT))
+                data = None
+                for i in range(9):
+                    data = sys.stdin.readline()
+                    sock.send(data.encode(FORMAT))
+                    if data is not None:
+                        break
+
+
+            def recv_msg(sock):
+                data = None
+                for i in range(9):
+                    data, addr = sock.recvfrom(1024)
+                    sys.stdout.write(data.decode(FORMAT))
+                    if data is not None:
+                        print(data.decode(FORMAT))
+                        break
+
+
+            th1 =threading.Thread(target=send_msg, args=(tcp_socket,)).start()
+            th2 =threading.Thread(target=recv_msg, args=(tcp_socket,)).start()
+            #########
+            # th1.join()
+            # th2.join()
+            # tcp_socket.send(input_char.encode(FORMAT))
 
             # finish message
+            # data = tcp_socket.recv(messageSize)
+            # print(data.decode(FORMAT))
             data = tcp_socket.recv(messageSize)
             print(data.decode(FORMAT))
-            data = tcp_socket.recv(messageSize)
-            print(data.decode(FORMAT))
-
+            # th1.join()
+            # th2.join()
             tcp_socket.close()
 
         except Exception as e:
