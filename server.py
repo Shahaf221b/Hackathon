@@ -10,7 +10,8 @@ from _thread import *
 portUDP = random.randint(2000, 30000)
 portTCP = random.randint(2000, 30000)
 # local_ip = socket.gethostbyname(socket.gethostname())
-local_ip = '172.1.0.27'
+# local_ip = '172.1.0.27'
+local_ip = '172.99.255.255'
 globalPort = "255.255.255.255"
 
 # message formatting
@@ -54,8 +55,8 @@ def broadcasting():
     try:
         # broadcasting
         UDPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        #UDPServerSocket.bind(('', portUDP)) #TODO: change
-        UDPServerSocket.bind(('172.99.255.255', portUDP))
+        UDPServerSocket.bind(('', portUDP)) #TODO: change
+        #UDPServerSocket.bind(('172.99.255.255', portUDP))
         message = "Server started, listening on IP address " + local_ip
         print(message)
 
