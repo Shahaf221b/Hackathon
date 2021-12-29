@@ -54,7 +54,8 @@ def broadcasting():
     try:
         # broadcasting
         UDPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        UDPServerSocket.bind(('', portUDP))
+        #UDPServerSocket.bind(('', portUDP)) #TODO: change
+        UDPServerSocket.bind(('172.99.255.255', portUDP))
         message = "Server started, listening on IP address " + local_ip
         print(message)
 

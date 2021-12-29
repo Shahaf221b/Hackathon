@@ -12,7 +12,7 @@ import getch
 FORMAT = "utf-8"
 messageSize = 2048
 
-team_number = randrange(50)
+# team_number = randrange(50)
 team_name = f"Winx Club"
 key_ = None
 
@@ -38,7 +38,8 @@ def main():
             udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
             # listening to the general port and connection to the first message
-            udp_socket.bind(("0.0.0.0", 13117))
+            # udp_socket.bind(("0.0.0.0", 13117))  #TODO: change
+            udp_socket.bind(("172.99.255.255", 13117))
             print("Client started, listening for offer requests...")
             print(f"client name: {team_name}")  # TODO: remove
             data, addr = udp_socket.recvfrom(messageSize)
@@ -72,7 +73,7 @@ def main():
             def recv_msg(sock):
                 data = None
                 for i in range(9):
-                    data, addr = sock.recvfrom(1024)
+                    data, addr = sock.recvfrom(messageSize)
                     sys.stdout.write(data.decode(FORMAT))
                     if data is not None:
                         print(data.decode(FORMAT))
